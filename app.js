@@ -1,65 +1,30 @@
-const API_BASE =
-  "https://prices.runescape.wiki/api/v2/rs";
+const API_BASE = "https://prices.runescape.wiki/api/v2/rs";
 
 const API = {
   mapping: API_BASE + "/mapping",
   latest: API_BASE + "/latest"
 };
 
-const LIST_INDEX =
-  "lists/index.json";
-
-const CUSTOM_LIST_KEY =
-  "rs3-price-dashboard-custom-lists";
-
-
-// ============================================================
-// STATE
-// ============================================================
+const LIST_INDEX = "lists/index.json";
+const CUSTOM_LIST_KEY = "rs3-price-dashboard-custom-lists";
 
 let mapping = [];
 let prices = {};
-
 let builtInLists = [];
 let customLists = [];
-
 let currentList = null;
 let currentRows = [];
 
-
-// ============================================================
-// DOM
-// ============================================================
-
-const listButtons =
-  document.getElementById("listButtons");
-
-const listTitle =
-  document.getElementById("listTitle");
-
-const listSummary =
-  document.getElementById("listSummary");
-
-const tableBody =
-  document.getElementById("priceTable");
-
-const emptyState =
-  document.getElementById("emptyState");
-
-const searchInput =
-  document.getElementById("searchInput");
-
-const sortSelect =
-  document.getElementById("sortSelect");
-
-const statusDot =
-  document.getElementById("statusDot");
-
-const statusText =
-  document.getElementById("statusText");
-
-const lastUpdated =
-  document.getElementById("lastUpdated");
+const listButtons = document.getElementById("listButtons");
+const listTitle = document.getElementById("listTitle");
+const listSummary = document.getElementById("listSummary");
+const tableBody = document.getElementById("priceTable");
+const emptyState = document.getElementById("emptyState");
+const searchInput = document.getElementById("searchInput");
+const sortSelect = document.getElementById("sortSelect");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const lastUpdated = document.getElementById("lastUpdated");
 
 
 // ============================================================
@@ -68,31 +33,20 @@ const lastUpdated =
 
 init();
 
-
 async function init() {
   try {
     setStatus("Loading", false);
 
     loadCustomLists();
-
     await loadBuiltInLists();
-
     await loadData();
 
     createListButtons();
 
-    if (
-      builtInLists.length > 0 ||
-      customLists.length > 0
-    ) {
-      const first =
-        builtInLists[0] ||
-        customLists[0];
+    const first = builtInLists[0] || customLists[0];
 
-      currentList =
-        first.id ||
-        first.name;
-
+    if (first) {
+      currentList = first.id;
       updateActiveButton();
       renderList();
     }
@@ -101,15 +55,8 @@ async function init() {
 
   } catch (error) {
     console.error(error);
-
-    setStatus(
-      "Error",
-      false,
-      true
-    );
-
-    lastUpdated.textContent =
-      error.message;
+    setStatus("Error", false, true);
+    lastUpdated.textContent = error.message;
   }
 }
 
@@ -119,76 +66,43 @@ async function init() {
 // ============================================================
 
 async function loadBuiltInLists() {
-  const response =
-    await fetch(
-      LIST_INDEX +
-      "?t=" +
-      Date.now()
-    );
+  const response = await fetch(
+    LIST_INDEX + "?t=" + Date.now()
+  );
 
   if (!response.ok) {
-    throw new Error(
-      "Could not load lists/index.json"
-    );
+    throw new Error("Could not load lists/index.json");
   }
 
-  const index =
-    await response.json();
+  const index = await response.json();
 
-  if (
-    !index.lists ||
-    !Array.isArray(index.lists)
-  ) {
-    throw new Error(
-      "Invalid lists/index.json"
-    );
+  if (!Array.isArray(index.lists)) {
+    throw new Error("Invalid lists/index.json");
   }
 
   builtInLists = [];
 
-  for (
-    const filename of index.lists
-  ) {
-    const response =
-      await fetch(
-        "lists/" +
-        filename +
-        "?t=" +
-        Date.now()
-      );
+  for (const filename of index.lists) {
+    const response = await fetch(
+      "lists/" + filename + "?t=" + Date.now()
+    );
 
     if (!response.ok) {
-      console.warn(
-        "Could not load:",
-        filename
-      );
-
+      console.warn("Could not load:", filename);
       continue;
     }
 
-    const list =
-      await response.json();
+    const list = await response.json();
 
-    if (
-      !list.name ||
-      !Array.isArray(list.items)
-    ) {
+    if (!list.name || !Array.isArray(list.items)) {
       continue;
     }
 
     builtInLists.push({
-      id:
-        "builtin:" +
-        filename,
-
-      name:
-        list.name,
-
-      items:
-        list.items,
-
-      builtin:
-        true
+      id: "builtin:" + filename,
+      name: list.name,
+      items: list.items,
+      builtin: true
     });
   }
 }
@@ -200,44 +114,26 @@ async function loadBuiltInLists() {
 
 function loadCustomLists() {
   try {
-    const saved =
-      localStorage.getItem(
-        CUSTOM_LIST_KEY
-      );
+    const saved = localStorage.getItem(CUSTOM_LIST_KEY);
 
-    customLists =
-      saved
-        ? JSON.parse(saved)
-        : [];
+    customLists = saved ? JSON.parse(saved) : [];
 
     if (!Array.isArray(customLists)) {
       customLists = [];
     }
 
   } catch (error) {
-    console.error(
-      "Could not load custom lists:",
-      error
-    );
-
+    console.error(error);
     customLists = [];
   }
 }
 
-
 function saveCustomLists() {
   localStorage.setItem(
     CUSTOM_LIST_KEY,
-    JSON.stringify(
-      customLists
-    )
+    JSON.stringify(customLists)
   );
 }
-
-
-// ============================================================
-// ALL LISTS
-// ============================================================
 
 function getAllLists() {
   return [
@@ -246,29 +142,23 @@ function getAllLists() {
   ];
 }
 
-
 function getCurrentList() {
   return getAllLists().find(
-    function(list) {
-      return list.id ===
-        currentList;
-    }
+    list => list.id === currentList
   );
 }
 
 
 // ============================================================
-// RS3 API
+// API
 // ============================================================
 
 async function loadData() {
-  const [
-    mappingResponse,
-    latestResponse
-  ] = await Promise.all([
-    fetch(API.mapping),
-    fetch(API.latest)
-  ]);
+  const [mappingResponse, latestResponse] =
+    await Promise.all([
+      fetch(API.mapping),
+      fetch(API.latest)
+    ]);
 
   if (!mappingResponse.ok) {
     throw new Error(
@@ -284,14 +174,11 @@ async function loadData() {
     );
   }
 
-  mapping =
-    await mappingResponse.json();
+  mapping = await mappingResponse.json();
 
-  const latest =
-    await latestResponse.json();
+  const latest = await latestResponse.json();
 
-  prices =
-    latest.data || {};
+  prices = latest.data || {};
 
   lastUpdated.textContent =
     "Updated " +
@@ -306,327 +193,479 @@ async function loadData() {
 function createListButtons() {
   listButtons.innerHTML = "";
 
-  builtInLists.forEach(
-    function(list) {
-      addListButton(
-        list,
-        false
-      );
-    }
-  );
+  builtInLists.forEach(list => {
+    addListButton(list, false);
+  });
 
-
-  if (customLists.length > 0) {
-    const divider =
-      document.createElement("div");
-
-    divider.className =
-      "list-divider";
-
-    listButtons.appendChild(
-      divider
-    );
+  if (customLists.length) {
+    const divider = document.createElement("div");
+    divider.className = "list-divider";
+    listButtons.appendChild(divider);
   }
 
+  customLists.forEach(list => {
+    addListButton(list, true);
+  });
 
-  customLists.forEach(
-    function(list) {
-      addListButton(
-        list,
-        true
-      );
-    }
-  );
+  const addButton = document.createElement("button");
+  addButton.className = "new-list-button";
+  addButton.textContent = "+ New List";
+  addButton.onclick = createNewList;
+  listButtons.appendChild(addButton);
 
+  const importButton = document.createElement("button");
+  importButton.className = "manage-list-button";
+  importButton.textContent = "Import Lists";
+  importButton.onclick = importLists;
+  listButtons.appendChild(importButton);
 
-  const addButton =
-    document.createElement("button");
-
-  addButton.className =
-    "new-list-button";
-
-  addButton.textContent =
-    "+ New List";
-
-  addButton.addEventListener(
-    "click",
-    createNewList
-  );
-
-  listButtons.appendChild(
-    addButton
-  );
-
-
-  const manageButton =
-    document.createElement("button");
-
-  manageButton.className =
-    "manage-list-button";
-
-  manageButton.textContent =
-    "Manage Lists";
-
-  manageButton.addEventListener(
-    "click",
-    showManageLists
-  );
-
-  listButtons.appendChild(
-    manageButton
-  );
+  const exportButton = document.createElement("button");
+  exportButton.className = "manage-list-button";
+  exportButton.textContent = "Export Lists";
+  exportButton.onclick = exportLists;
+  listButtons.appendChild(exportButton);
 }
 
+function addListButton(list, custom) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "list-row";
 
-function addListButton(
-  list,
-  custom
-) {
-  const button =
-    document.createElement("button");
-
-  button.className =
-    "list-button";
+  const button = document.createElement("button");
+  button.className = "list-button";
+  button.dataset.list = list.id;
+  button.textContent = list.name;
 
   if (custom) {
-    button.classList.add(
-      "custom"
-    );
+    button.classList.add("custom");
   }
 
-  button.textContent =
-    list.name;
+  button.onclick = () => {
+    currentList = list.id;
+    searchInput.value = "";
+    sortSelect.value = "default";
+    updateActiveButton();
+    renderList();
+  };
 
-  button.dataset.list =
-    list.id;
+  wrapper.appendChild(button);
 
-  button.addEventListener(
-    "click",
-    function() {
-      currentList =
-        list.id;
+  if (custom) {
+    const menuButton = document.createElement("button");
+    menuButton.className = "list-menu-button";
+    menuButton.textContent = "⋮";
+    menuButton.title = "List options";
 
-      searchInput.value = "";
-      sortSelect.value =
-        "default";
+    menuButton.onclick = event => {
+      event.stopPropagation();
+      showListMenu(list, menuButton);
+    };
 
-      updateActiveButton();
-      renderList();
-    }
-  );
+    wrapper.appendChild(menuButton);
+  }
 
-  listButtons.appendChild(
-    button
-  );
+  listButtons.appendChild(wrapper);
 }
-
-
-// ============================================================
-// ACTIVE BUTTON
-// ============================================================
 
 function updateActiveButton() {
   document
     .querySelectorAll(".list-button")
-    .forEach(
-      function(button) {
-        button.classList.toggle(
-          "active",
-          button.dataset.list ===
-            currentList
-        );
-      }
-    );
+    .forEach(button => {
+      button.classList.toggle(
+        "active",
+        button.dataset.list === currentList
+      );
+    });
 }
 
 
 // ============================================================
-// BUILD PRICE ROWS
+// NEW LIST
 // ============================================================
 
-function buildRows() {
-  const list =
-    getCurrentList();
+function createNewList() {
+  const name = prompt("List name:");
 
-  if (!list) {
-    return [];
-  }
-
-
-  return list.items.map(
-    function(item, index) {
-
-      let itemData;
-
-
-      if (
-        typeof item ===
-        "number"
-      ) {
-        itemData =
-          mapping.find(
-            function(mapped) {
-              return Number(
-                mapped.id
-              ) === item;
-            }
-          );
-
-      } else {
-        itemData =
-          findItem(item);
-      }
-
-
-      if (!itemData) {
-        return {
-          name:
-            String(item),
-
-          id: null,
-          buy: null,
-          sell: null,
-          buyTime: null,
-          sellTime: null,
-          margin: null,
-          volume: null,
-          index: index
-        };
-      }
-
-
-      const id =
-        Number(itemData.id);
-
-      const price =
-        prices[id];
-
-
-      if (!price) {
-        return {
-          name:
-            itemData.name,
-
-          id: id,
-          buy: null,
-          sell: null,
-          buyTime: null,
-          sellTime: null,
-          margin: null,
-          volume: null,
-          index: index
-        };
-      }
-
-
-      const buy =
-        price.high ?? null;
-
-      const sell =
-        price.low ?? null;
-
-
-      return {
-        name:
-          itemData.name,
-
-        id: id,
-
-        buy:
-          buy,
-
-        sell:
-          sell,
-
-        buyTime:
-          price.highTime ??
-          null,
-
-        sellTime:
-          price.lowTime ??
-          null,
-
-        margin:
-          buy !== null &&
-          sell !== null
-            ? buy - sell
-            : null,
-
-        volume:
-          price.volume ??
-          price.dailyVolume ??
-          null,
-
-        index: index
-      };
-    }
-  );
-}
-
-
-// ============================================================
-// ITEM LOOKUP
-// ============================================================
-
-function findItem(name) {
-  const wanted =
-    String(name)
-      .trim()
-      .toLowerCase();
-
-  return mapping.find(
-    function(item) {
-      return String(
-        item.name || ""
-      )
-        .trim()
-        .toLowerCase() ===
-        wanted;
-    }
-  );
-}
-
-
-// ============================================================
-// RENDER LIST
-// ============================================================
-
-function renderList() {
-  currentRows =
-    buildRows();
-
-  const list =
-    getCurrentList();
-
-  if (!list) {
+  if (!name || !name.trim()) {
     return;
   }
 
+  const trimmed = name.trim();
 
-  listTitle.textContent =
-    list.name;
+  if (
+    getAllLists().some(
+      list =>
+        list.name.toLowerCase() ===
+        trimmed.toLowerCase()
+    )
+  ) {
+    alert("A list with that name already exists.");
+    return;
+  }
+
+  const list = {
+    id: "custom:" + Date.now(),
+    name: trimmed,
+    items: [],
+    builtin: false
+  };
+
+  customLists.push(list);
+  saveCustomLists();
+
+  currentList = list.id;
+
+  createListButtons();
+  updateActiveButton();
+  renderList();
+
+  openItemPicker();
+}
 
 
-  const available =
-    currentRows.filter(
-      function(row) {
-        return (
-          row.buy !== null ||
-          row.sell !== null
-        );
+// ============================================================
+// LIST MENU
+// ============================================================
+
+function showListMenu(list, anchor) {
+  closePopups();
+
+  const menu = document.createElement("div");
+  menu.className = "list-popup";
+
+  const rename = menuItem("Rename", () => {
+    closePopups();
+
+    const name = prompt(
+      "New list name:",
+      list.name
+    );
+
+    if (!name || !name.trim()) {
+      return;
+    }
+
+    list.name = name.trim();
+
+    saveCustomLists();
+    createListButtons();
+    updateActiveButton();
+    renderList();
+  });
+
+  const add = menuItem("Add Items", () => {
+    closePopups();
+    currentList = list.id;
+    openItemPicker();
+  });
+
+  const duplicate = menuItem("Duplicate", () => {
+    closePopups();
+
+    const copy = {
+      id: "custom:" + Date.now(),
+      name: list.name + " Copy",
+      items: [...list.items],
+      builtin: false
+    };
+
+    customLists.push(copy);
+    saveCustomLists();
+
+    currentList = copy.id;
+
+    createListButtons();
+    updateActiveButton();
+    renderList();
+  });
+
+  const remove = menuItem("Delete", () => {
+    closePopups();
+
+    if (
+      !confirm(
+        'Delete "' + list.name + '"?'
+      )
+    ) {
+      return;
+    }
+
+    customLists = customLists.filter(
+      item => item.id !== list.id
+    );
+
+    saveCustomLists();
+
+    const fallback =
+      builtInLists[0] ||
+      customLists[0];
+
+    currentList =
+      fallback ? fallback.id : null;
+
+    createListButtons();
+    updateActiveButton();
+    renderList();
+  });
+
+  menu.appendChild(rename);
+  menu.appendChild(add);
+  menu.appendChild(duplicate);
+
+  const separator = document.createElement("div");
+  separator.className = "popup-separator";
+  menu.appendChild(separator);
+
+  menu.appendChild(remove);
+
+  document.body.appendChild(menu);
+
+  const rect = anchor.getBoundingClientRect();
+
+  menu.style.position = "fixed";
+  menu.style.left =
+    Math.min(
+      rect.right + 4,
+      window.innerWidth - 180
+    ) + "px";
+  menu.style.top =
+    rect.top + "px";
+
+  setTimeout(() => {
+    document.addEventListener(
+      "click",
+      closePopups,
+      { once: true }
+    );
+  });
+}
+
+function menuItem(text, action) {
+  const item = document.createElement("button");
+
+  item.className = "popup-item";
+  item.textContent = text;
+  item.onclick = action;
+
+  return item;
+}
+
+function closePopups() {
+  document
+    .querySelectorAll(".list-popup")
+    .forEach(popup => popup.remove());
+}
+
+
+// ============================================================
+// ITEM PICKER
+// ============================================================
+
+function openItemPicker() {
+  const list = getCurrentList();
+
+  if (!list || list.builtin) {
+    return;
+  }
+
+  closePopups();
+
+  const overlay = document.createElement("div");
+  overlay.className = "item-picker-overlay";
+
+  const modal = document.createElement("div");
+  modal.className = "item-picker";
+
+  const header = document.createElement("div");
+  header.className = "item-picker-header";
+
+  const title = document.createElement("h2");
+  title.textContent =
+    "Add items to " + list.name;
+
+  const close = document.createElement("button");
+  close.className = "picker-close";
+  close.textContent = "×";
+
+  close.onclick = () => overlay.remove();
+
+  header.appendChild(title);
+  header.appendChild(close);
+
+  const input = document.createElement("input");
+  input.className = "item-picker-search";
+  input.placeholder = "Search RS3 items...";
+  input.autocomplete = "off";
+
+  const results = document.createElement("div");
+  results.className = "item-picker-results";
+
+  const selected = document.createElement("div");
+  selected.className = "item-picker-selected";
+
+  modal.appendChild(header);
+  modal.appendChild(input);
+  modal.appendChild(results);
+  modal.appendChild(selected);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  function renderSelected() {
+    selected.innerHTML = "";
+
+    const heading = document.createElement("div");
+    heading.className = "selected-heading";
+    heading.textContent =
+      "Items in this list (" +
+      list.items.length +
+      ")";
+
+    selected.appendChild(heading);
+
+    list.items.forEach(id => {
+      const item = mapping.find(
+        mapped =>
+          Number(mapped.id) === Number(id)
+      );
+
+      if (!item) {
+        return;
       }
-    ).length;
 
+      const chip = document.createElement("button");
+      chip.className = "selected-item";
+      chip.textContent = "× " + item.name;
 
-  listSummary.textContent =
-    currentRows.length +
-    " items · " +
-    available +
-    " with current prices";
+      chip.onclick = () => {
+        list.items =
+          list.items.filter(
+            existing =>
+              Number(existing) !==
+              Number(id)
+          );
 
+        saveCustomLists();
+        renderSelected();
+        renderList();
+      };
 
-  renderTable(
-    currentRows
+      selected.appendChild(chip);
+    });
+  }
+
+  function renderResults() {
+    const query =
+      input.value
+        .trim()
+        .toLowerCase();
+
+    results.innerHTML = "";
+
+    if (!query) {
+      return;
+    }
+
+    const matches =
+      mapping
+        .filter(item => {
+          if (!item.name) {
+            return false;
+          }
+
+          return item.name
+            .toLowerCase()
+            .includes(query);
+        })
+        .slice(0, 25);
+
+    if (!matches.length) {
+      const empty =
+        document.createElement("div");
+
+      empty.className =
+        "picker-no-results";
+
+      empty.textContent =
+        "No matching items.";
+
+      results.appendChild(empty);
+      return;
+    }
+
+    matches.forEach(item => {
+      const alreadyAdded =
+        list.items.some(
+          id =>
+            Number(id) ===
+            Number(item.id)
+        );
+
+      const result =
+        document.createElement("button");
+
+      result.className =
+        "picker-result";
+
+      const name =
+        document.createElement("span");
+
+      name.textContent =
+        item.name;
+
+      const id =
+        document.createElement("small");
+
+      id.textContent =
+        "#" + item.id;
+
+      result.appendChild(name);
+      result.appendChild(id);
+
+      if (alreadyAdded) {
+        result.classList.add("already-added");
+      }
+
+      result.onclick = () => {
+        if (alreadyAdded) {
+          return;
+        }
+
+        list.items.push(
+          Number(item.id)
+        );
+
+        saveCustomLists();
+
+        input.value = "";
+        results.innerHTML = "";
+
+        renderSelected();
+        renderList();
+      };
+
+      results.appendChild(result);
+    });
+  }
+
+  input.addEventListener(
+    "input",
+    renderResults
+  );
+
+  overlay.addEventListener(
+    "click",
+    event => {
+      if (event.target === overlay) {
+        overlay.remove();
+      }
+    }
+  );
+
+  renderSelected();
+
+  setTimeout(
+    () => input.focus(),
+    50
   );
 }
 
@@ -635,28 +674,149 @@ function renderList() {
 // TABLE
 // ============================================================
 
-function renderTable(rows) {
-  let visible =
-    rows.slice();
+function buildRows() {
+  const list = getCurrentList();
 
+  if (!list) {
+    return [];
+  }
+
+  return list.items.map(
+    (item, index) => {
+      let itemData;
+
+      if (typeof item === "number") {
+        itemData = mapping.find(
+          mapped =>
+            Number(mapped.id) ===
+            Number(item)
+        );
+      } else {
+        itemData = findItem(item);
+      }
+
+      if (!itemData) {
+        return {
+          name: String(item),
+          id: null,
+          buy: null,
+          sell: null,
+          buyTime: null,
+          sellTime: null,
+          margin: null,
+          volume: null,
+          index
+        };
+      }
+
+      const id =
+        Number(itemData.id);
+
+      const price =
+        prices[id];
+
+      if (!price) {
+        return {
+          name: itemData.name,
+          id,
+          buy: null,
+          sell: null,
+          buyTime: null,
+          sellTime: null,
+          margin: null,
+          volume: null,
+          index
+        };
+      }
+
+      const buy =
+        price.high ?? null;
+
+      const sell =
+        price.low ?? null;
+
+      return {
+        name: itemData.name,
+        id,
+        buy,
+        sell,
+        buyTime:
+          price.highTime ?? null,
+        sellTime:
+          price.lowTime ?? null,
+        margin:
+          buy !== null &&
+          sell !== null
+            ? buy - sell
+            : null,
+        volume:
+          price.volume ??
+          price.dailyVolume ??
+          null,
+        index
+      };
+    }
+  );
+}
+
+function findItem(name) {
+  const wanted =
+    String(name)
+      .trim()
+      .toLowerCase();
+
+  return mapping.find(
+    item =>
+      String(item.name || "")
+        .trim()
+        .toLowerCase() === wanted
+  );
+}
+
+function renderList() {
+  const list = getCurrentList();
+
+  if (!list) {
+    return;
+  }
+
+  currentRows = buildRows();
+
+  listTitle.textContent =
+    list.name;
+
+  const available =
+    currentRows.filter(
+      row =>
+        row.buy !== null ||
+        row.sell !== null
+    ).length;
+
+  listSummary.textContent =
+    currentRows.length +
+    " items · " +
+    available +
+    " with current prices";
+
+  renderTable(currentRows);
+}
+
+function renderTable(rows) {
+  let visible = rows.slice();
 
   const search =
     searchInput.value
       .trim()
       .toLowerCase();
 
-
   if (search) {
-    visible =
-      visible.filter(
-        function(row) {
-          return row.name
-            .toLowerCase()
-            .includes(search);
-        }
-      );
+    visible = visible.filter(
+      row =>
+        row.name
+          .toLowerCase()
+          .includes(search)
+    );
   }
-
 
   visible =
     sortRows(
@@ -664,51 +824,38 @@ function renderTable(rows) {
       sortSelect.value
     );
 
-
   tableBody.innerHTML = "";
 
-
-  if (visible.length === 0) {
+  if (!visible.length) {
     emptyState.hidden = false;
     return;
   }
 
-
   emptyState.hidden = true;
 
-
-  visible.forEach(
-    function(row) {
-      tableBody.appendChild(
-        createRow(row)
-      );
-    }
-  );
+  visible.forEach(row => {
+    tableBody.appendChild(
+      createRow(row)
+    );
+  });
 }
-
 
 function createRow(row) {
   const tr =
     document.createElement("tr");
 
-
   const item =
     document.createElement("td");
 
   item.className = "item";
-
-  item.textContent =
-    row.name;
-
+  item.textContent = row.name;
 
   const buy =
     document.createElement("td");
 
   buy.className = "price";
-
   buy.textContent =
     formatPrice(row.buy);
-
 
   const buyAge =
     document.createElement("td");
@@ -720,15 +867,12 @@ function createRow(row) {
   buyAge.textContent =
     formatAge(row.buyTime);
 
-
   const sell =
     document.createElement("td");
 
   sell.className = "price";
-
   sell.textContent =
     formatPrice(row.sell);
-
 
   const sellAge =
     document.createElement("td");
@@ -739,7 +883,6 @@ function createRow(row) {
 
   sellAge.textContent =
     formatAge(row.sellTime);
-
 
   const margin =
     document.createElement("td");
@@ -752,22 +895,14 @@ function createRow(row) {
   }
 
   margin.textContent =
-    formatMargin(
-      row.margin
-    );
-
+    formatMargin(row.margin);
 
   const volume =
     document.createElement("td");
 
-  volume.className =
-    "volume";
-
+  volume.className = "volume";
   volume.textContent =
-    formatCompact(
-      row.volume
-    );
-
+    formatCompact(row.volume);
 
   tr.appendChild(item);
   tr.appendChild(buy);
@@ -776,7 +911,6 @@ function createRow(row) {
   tr.appendChild(sellAge);
   tr.appendChild(margin);
   tr.appendChild(volume);
-
 
   return tr;
 }
@@ -789,26 +923,20 @@ function createRow(row) {
 function sortRows(rows, mode) {
   if (mode === "default") {
     return rows.sort(
-      function(a, b) {
-        return a.index - b.index;
-      }
+      (a, b) =>
+        a.index - b.index
     );
   }
-
 
   if (mode === "name") {
     return rows.sort(
-      function(a, b) {
-        return a.name.localeCompare(
-          b.name
-        );
-      }
+      (a, b) =>
+        a.name.localeCompare(b.name)
     );
   }
 
-
   return rows.sort(
-    function(a, b) {
+    (a, b) => {
       const av =
         a[mode] ?? -Infinity;
 
@@ -826,13 +954,10 @@ function sortRows(rows, mode) {
 // ============================================================
 
 function formatPrice(value) {
-  if (value === null) {
-    return "—";
-  }
-
-  return formatCompact(value);
+  return value === null
+    ? "—"
+    : formatCompact(value);
 }
-
 
 function formatMargin(value) {
   if (value === null) {
@@ -840,16 +965,14 @@ function formatMargin(value) {
   }
 
   const sign =
-    value > 0
-      ? "+"
-      : "";
+    value > 0 ? "+" : "";
 
-  return sign +
-    Math.round(
-      value
-    ).toLocaleString();
+  return (
+    sign +
+    Math.round(value)
+      .toLocaleString()
+  );
 }
-
 
 function formatCompact(value) {
   if (
@@ -859,8 +982,7 @@ function formatCompact(value) {
     return "—";
   }
 
-  const number =
-    Number(value);
+  const number = Number(value);
 
   if (!Number.isFinite(number)) {
     return "—";
@@ -869,48 +991,31 @@ function formatCompact(value) {
   const absolute =
     Math.abs(number);
 
-
-  if (absolute < 1000) {
-    return Math.round(
-      number
-    ).toLocaleString();
-  }
-
-
   if (absolute < 1000000) {
-    return Math.round(
-      number
-    ).toLocaleString();
+    return Math.round(number)
+      .toLocaleString();
   }
-
 
   if (absolute < 1000000000) {
     return (
       number / 1000000
     )
       .toFixed(3)
-      .replace(
-        /\.?0+$/,
-        ""
-      ) +
+      .replace(/\.?0+$/, "") +
       "M";
   }
-
 
   return (
     number / 1000000000
   )
     .toFixed(3)
-    .replace(
-      /\.?0+$/,
-      ""
-    ) +
+    .replace(/\.?0+$/, "") +
     "B";
 }
 
 
 // ============================================================
-// AGE
+// TIME
 // ============================================================
 
 function formatAge(timestamp) {
@@ -922,28 +1027,19 @@ function formatAge(timestamp) {
     Math.floor(
       (
         Date.now() -
-        Number(timestamp) *
-          1000
+        Number(timestamp) * 1000
       ) / 1000
     );
 
   seconds =
-    Math.max(
-      0,
-      seconds
-    );
-
+    Math.max(0, seconds);
 
   if (seconds < 60) {
     return "just now";
   }
 
-
   const minutes =
-    Math.floor(
-      seconds / 60
-    );
-
+    Math.floor(seconds / 60);
 
   if (minutes < 60) {
     return minutes === 1
@@ -951,12 +1047,8 @@ function formatAge(timestamp) {
       : minutes + " min";
   }
 
-
   const hours =
-    Math.floor(
-      minutes / 60
-    );
-
+    Math.floor(minutes / 60);
 
   if (hours < 24) {
     return hours === 1
@@ -964,576 +1056,158 @@ function formatAge(timestamp) {
       : hours + " hr";
   }
 
-
   const days =
-    Math.floor(
-      hours / 24
-    );
-
+    Math.floor(hours / 24);
 
   return days === 1
     ? "1 day"
     : days + " days";
 }
 
-
 function ageClass(timestamp) {
   if (!timestamp) {
     return "";
   }
 
-
   const age =
     Date.now() -
-    Number(timestamp) *
-      1000;
-
+    Number(timestamp) * 1000;
 
   const minutes =
     age / 60000;
-
 
   if (minutes < 5) {
     return "fresh";
   }
 
-
   if (minutes < 60) {
     return "warning";
   }
-
 
   return "stale";
 }
 
 
 // ============================================================
-// CREATE CUSTOM LIST
-// ============================================================
-
-function createNewList() {
-  const name =
-    prompt(
-      "Enter a name for your new list:"
-    );
-
-
-  if (!name) {
-    return;
-  }
-
-
-  const trimmed =
-    name.trim();
-
-
-  if (!trimmed) {
-    return;
-  }
-
-
-  if (
-    getAllLists().some(
-      function(list) {
-        return list.name
-          .toLowerCase() ===
-          trimmed.toLowerCase();
-      }
-    )
-  ) {
-    alert(
-      "A list with that name already exists."
-    );
-
-    return;
-  }
-
-
-  const list = {
-    id:
-      "custom:" +
-      Date.now(),
-
-    name:
-      trimmed,
-
-    items: [],
-
-    builtin:
-      false
-  };
-
-
-  customLists.push(list);
-
-  saveCustomLists();
-
-  currentList =
-    list.id;
-
-  createListButtons();
-  updateActiveButton();
-  renderList();
-
-  addItemsToCurrentList();
-}
-
-
-// ============================================================
-// ADD ITEMS
-// ============================================================
-
-function addItemsToCurrentList() {
-  const list =
-    getCurrentList();
-
-
-  if (
-    !list ||
-    list.builtin
-  ) {
-    return;
-  }
-
-
-  const input =
-    prompt(
-      "Enter item names separated by commas:"
-    );
-
-
-  if (!input) {
-    return;
-  }
-
-
-  const names =
-    input
-      .split(",")
-      .map(
-        function(name) {
-          return name.trim();
-        }
-      )
-      .filter(Boolean);
-
-
-  let added = 0;
-
-
-  names.forEach(
-    function(name) {
-      const item =
-        findItem(name);
-
-
-      if (!item) {
-        return;
-      }
-
-
-      const id =
-        Number(item.id);
-
-
-      if (
-        !list.items.includes(id)
-      ) {
-        list.items.push(id);
-        added++;
-      }
-    }
-  );
-
-
-  saveCustomLists();
-
-  renderList();
-
-
-  alert(
-    added +
-    " item" +
-    (added === 1
-      ? ""
-      : "s") +
-    " added."
-  );
-}
-
-
-// ============================================================
-// MANAGE LISTS
-// ============================================================
-
-function showManageLists() {
-  if (customLists.length === 0) {
-    alert(
-      "You don't have any custom lists yet."
-    );
-
-    return;
-  }
-
-
-  const names =
-    customLists
-      .map(
-        function(list, index) {
-          return (
-            (index + 1) +
-            ". " +
-            list.name
-          );
-        }
-      )
-      .join("\n");
-
-
-  const choice =
-    prompt(
-      "Custom Lists:\n\n" +
-      names +
-      "\n\nEnter the number to manage:"
-    );
-
-
-  if (!choice) {
-    return;
-  }
-
-
-  const index =
-    Number(choice) - 1;
-
-
-  if (
-    !Number.isInteger(index) ||
-    !customLists[index]
-  ) {
-    return;
-  }
-
-
-  manageList(
-    customLists[index]
-  );
-}
-
-
-function manageList(list) {
-  const action =
-    prompt(
-      list.name +
-      "\n\n" +
-      "1 = Rename\n" +
-      "2 = Duplicate\n" +
-      "3 = Delete\n" +
-      "4 = Add Items"
-    );
-
-
-  switch (action) {
-
-    case "1":
-      renameList(list);
-      break;
-
-    case "2":
-      duplicateList(list);
-      break;
-
-    case "3":
-      deleteList(list);
-      break;
-
-    case "4":
-      currentList =
-        list.id;
-
-      addItemsToCurrentList();
-      break;
-  }
-}
-
-
-// ============================================================
-// RENAME
-// ============================================================
-
-function renameList(list) {
-  const name =
-    prompt(
-      "New list name:",
-      list.name
-    );
-
-
-  if (!name) {
-    return;
-  }
-
-
-  const trimmed =
-    name.trim();
-
-
-  if (!trimmed) {
-    return;
-  }
-
-
-  list.name =
-    trimmed;
-
-
-  saveCustomLists();
-
-  createListButtons();
-
-  renderList();
-}
-
-
-// ============================================================
-// DUPLICATE
-// ============================================================
-
-function duplicateList(list) {
-  const copy = {
-    id:
-      "custom:" +
-      Date.now(),
-
-    name:
-      list.name +
-      " Copy",
-
-    items:
-      [...list.items],
-
-    builtin:
-      false
-  };
-
-
-  customLists.push(copy);
-
-  saveCustomLists();
-
-  currentList =
-    copy.id;
-
-  createListButtons();
-  updateActiveButton();
-  renderList();
-}
-
-
-// ============================================================
-// DELETE
-// ============================================================
-
-function deleteList(list) {
-  const confirmed =
-    confirm(
-      'Delete "' +
-      list.name +
-      '"?'
-    );
-
-
-  if (!confirmed) {
-    return;
-  }
-
-
-  customLists =
-    customLists.filter(
-      function(item) {
-        return item.id !==
-          list.id;
-      }
-    );
-
-
-  saveCustomLists();
-
-
-  if (
-    currentList ===
-    list.id
-  ) {
-    const fallback =
-      builtInLists[0] ||
-      customLists[0];
-
-    currentList =
-      fallback
-        ? fallback.id
-        : null;
-  }
-
-
-  createListButtons();
-  updateActiveButton();
-  renderList();
-}
-
-
-// ============================================================
-// EXPORT
+// IMPORT / EXPORT
 // ============================================================
 
 function exportLists() {
-  const data =
-    JSON.stringify(
-      customLists,
-      null,
-      2
-    );
+  if (!customLists.length) {
+    alert("You don't have any custom lists to export.");
+    return;
+  }
 
-
-  const blob =
-    new Blob(
-      [data],
-      {
-        type:
-          "application/json"
-      }
-    );
-
+  const blob = new Blob(
+    [
+      JSON.stringify(
+        customLists,
+        null,
+        2
+      )
+    ],
+    {
+      type: "application/json"
+    }
+  );
 
   const url =
-    URL.createObjectURL(
-      blob
-    );
-
+    URL.createObjectURL(blob);
 
   const link =
-    document.createElement(
-      "a"
-    );
+    document.createElement("a");
 
   link.href = url;
-
   link.download =
     "rs3-custom-lists.json";
 
   link.click();
 
-
-  URL.revokeObjectURL(
-    url
-  );
+  URL.revokeObjectURL(url);
 }
-
-
-// ============================================================
-// IMPORT
-// ============================================================
 
 function importLists() {
   const input =
-    document.createElement(
-      "input"
-    );
+    document.createElement("input");
 
-  input.type =
-    "file";
-
+  input.type = "file";
   input.accept =
     ".json,application/json";
 
+  input.onchange = () => {
+    const file = input.files[0];
 
-  input.addEventListener(
-    "change",
-    function() {
-      const file =
-        input.files[0];
-
-      if (!file) {
-        return;
-      }
-
-
-      const reader =
-        new FileReader();
-
-
-      reader.onload =
-        function() {
-          try {
-            const imported =
-              JSON.parse(
-                reader.result
-              );
-
-
-            if (
-              !Array.isArray(
-                imported
-              )
-            ) {
-              throw new Error(
-                "Invalid file."
-              );
-            }
-
-
-            imported.forEach(
-              function(list) {
-
-                if (
-                  !list.name ||
-                  !Array.isArray(
-                    list.items
-                  )
-                ) {
-                  return;
-                }
-
-
-                customLists.push({
-                  id:
-                    "custom:" +
-                    Date.now() +
-                    ":" +
-                    Math.random(),
-
-                  name:
-                    list.name,
-
-                  items:
-                    list.items,
-
-                  builtin:
-                    false
-                });
-              }
-            );
-
-
-            saveCustomLists();
-
-            createListButtons();
-
-            alert(
-              "Lists imported successfully."
-            );
-
-          } catch (error) {
-            alert(
-              "Could not import that file."
-            );
-          }
-        };
-
-
-      reader.readAsText(file);
+    if (!file) {
+      return;
     }
-  );
 
+    const reader =
+      new FileReader();
+
+    reader.onload = () => {
+      try {
+        const imported =
+          JSON.parse(
+            reader.result
+          );
+
+        if (!Array.isArray(imported)) {
+          throw new Error();
+        }
+
+        let importedCount = 0;
+
+        imported.forEach(list => {
+          if (
+            !list.name ||
+            !Array.isArray(list.items)
+          ) {
+            return;
+          }
+
+          customLists.push({
+            id:
+              "custom:" +
+              Date.now() +
+              ":" +
+              Math.random(),
+
+            name:
+              list.name,
+
+            items:
+              list.items.map(
+                Number
+              ),
+
+            builtin:
+              false
+          });
+
+          importedCount++;
+        });
+
+        saveCustomLists();
+        createListButtons();
+
+        alert(
+          importedCount +
+          " list" +
+          (importedCount === 1
+            ? ""
+            : "s") +
+          " imported."
+        );
+
+      } catch {
+        alert(
+          "That doesn't appear to be a valid RS3 list export."
+        );
+      }
+    };
+
+    reader.readAsText(file);
+  };
 
   input.click();
 }
@@ -1545,21 +1219,12 @@ function importLists() {
 
 searchInput.addEventListener(
   "input",
-  function() {
-    renderTable(
-      currentRows
-    );
-  }
+  () => renderTable(currentRows)
 );
-
 
 sortSelect.addEventListener(
   "change",
-  function() {
-    renderTable(
-      currentRows
-    );
-  }
+  () => renderTable(currentRows)
 );
 
 
@@ -1568,7 +1233,7 @@ sortSelect.addEventListener(
 // ============================================================
 
 setInterval(
-  async function() {
+  async () => {
     try {
       setStatus(
         "Updating",
@@ -1576,7 +1241,6 @@ setInterval(
       );
 
       await loadData();
-
       renderList();
 
       setStatus(
@@ -1613,13 +1277,11 @@ function setStatus(
   statusDot.className =
     "status-dot";
 
-
   if (live) {
     statusDot.classList.add(
       "live"
     );
   }
-
 
   if (error) {
     statusDot.classList.add(
