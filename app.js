@@ -655,15 +655,10 @@ function formatMargin(value) {
     return "—";
   }
 
-  const sign =
-    value > 0
-      ? "+"
-      : "";
+  const sign = value > 0 ? "+" : "";
 
   return sign +
-    formatCompact(
-      Math.abs(value)
-    );
+    Math.round(value).toLocaleString();
 }
 
 
@@ -675,45 +670,43 @@ function formatCompact(value) {
     return "—";
   }
 
-
-  const number =
-    Number(value);
-
+  const number = Number(value);
 
   if (!Number.isFinite(number)) {
     return "—";
   }
 
+  const absolute = Math.abs(number);
 
-  if (Math.abs(number) >= 1e9) {
-    return (
-      number / 1e9
-    ).toFixed(2)
-      .replace(/\.00$/, "") +
-      "B";
+  // Under 1K: show the exact price.
+  if (absolute < 1000) {
+    return Math.round(number).toLocaleString();
   }
 
-
-  if (Math.abs(number) >= 1e6) {
-    return (
-      number / 1e6
-    ).toFixed(2)
-      .replace(/\.00$/, "") +
-      "M";
+  // 1K - 999K: show the exact price.
+  if (absolute < 1000000) {
+    return Math.round(number).toLocaleString();
   }
 
-
-  if (Math.abs(number) >= 1e3) {
+  // 1M - 999M: show 3 significant digits.
+  if (absolute < 1000000000) {
     return (
-      number / 1e3
-    ).toFixed(1)
-      .replace(/\.0$/, "") +
-      "K";
+      (number / 1000000)
+        .toFixed(3)
+        .replace(/\.?0+$/, "")
+      + "M"
+    );
   }
 
-
-  return number.toLocaleString();
+  // 1B+: show 3 significant digits.
+  return (
+    (number / 1000000000)
+      .toFixed(3)
+      .replace(/\.?0+$/, "")
+    + "B"
+  );
 }
+
 
 
 // ============================================================
