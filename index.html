@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>RS3 Price Dashboard</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-title">RS3</div>
+        <div class="brand-subtitle">PRICE DASHBOARD</div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">WATCHLISTS</div>
+        <div id="listButtons"></div>
+      </div>
+    </aside>
+
+
+    <main class="main">
+
+      <header class="topbar">
+        <div>
+          <h1 id="listTitle">Loading...</h1>
+          <div id="listSummary" class="subtitle"></div>
+        </div>
+
+        <div class="status">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">Loading</span>
+        </div>
+      </header>
+
+
+      <section class="toolbar">
+
+        <div class="search">
+          <span>⌕</span>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search items..."
+          >
+        </div>
+
+        <select id="sortSelect">
+          <option value="default">Default order</option>
+          <option value="name">Item</option>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+          <option value="margin">Margin</option>
+          <option value="volume">Volume</option>
+        </select>
+
+      </section>
+
+
+      <section class="table-card">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th class="item-column">Item</th>
+              <th>Buy</th>
+              <th>Age</th>
+              <th>Sell</th>
+              <th>Age</th>
+              <th>Margin</th>
+              <th>Volume</th>
+            </tr>
+          </thead>
+
+          <tbody id="priceTable"></tbody>
+
+        </table>
+
+        <div
+          id="emptyState"
+          class="empty-state"
+          hidden
+        >
+          No items found.
+        </div>
+
+      </section>
+
+
+      <footer>
+        <span id="lastUpdated">Waiting for data...</span>
+        <span>RS3 Wiki Prices API</span>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
