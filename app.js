@@ -197,18 +197,9 @@ async function loadData() {
     mappingResponse,
     latestResponse
   ] = await Promise.all([
-    fetch(
-      API.mapping +
-      "?t=" +
-      Date.now()
-    ),
-    fetch(
-      API.latest +
-      "?t=" +
-      Date.now()
-    )
+    fetch(API.mapping),
+    fetch(API.latest)
   ]);
-
 
   if (!mappingResponse.ok) {
     throw new Error(
@@ -217,7 +208,6 @@ async function loadData() {
     );
   }
 
-
   if (!latestResponse.ok) {
     throw new Error(
       "Latest API returned HTTP " +
@@ -225,18 +215,14 @@ async function loadData() {
     );
   }
 
-
   mapping =
     await mappingResponse.json();
-
 
   const latest =
     await latestResponse.json();
 
-
   prices =
     latest.data || {};
-
 
   lastUpdated.textContent =
     "Updated " +
